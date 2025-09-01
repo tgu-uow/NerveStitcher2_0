@@ -1,50 +1,87 @@
-<img src=data/lab_logo2.png width="35%" height="15%">
+<img src="data/lab_logo2.png" width="35%">
 
-# NerveStitcher: Corneal Confocal Microscope Images Stitching with Neural Networks
+# NerveStitcher 2.0  
+Deep-Feature-Based, Large-Scale Microscopy Image Stitching Pipeline
 
-## Introduction
+> **Author / Maintainer:** Hongyu Qian – TGU-UOW Lab  
+> **Built on:** [NerveStitcher v1](https://doi.org/10.1016/j.compbiomed.2022.106303) + SuperPoint / SuperGlue
 
-NerveStitcher is a deep learning based corneal confocal microscopic image stitching tool. The tool integrates the functions of microscope vignetting correction and image stitching, and can process corneal nerve images in a pipeline. Input sequential images (without pre-defined acquisition sequences) and output vignetting corrected images and stitching results. 
+---
 
-It has extremely high efficiency and accuracy, in our preliminary experiments: NVIDIA GeForce GTX1060 6G stitching time is about 0.331 seconds (per image pair) under GPU hardware acceleration. i5-4460 3.2GHz stitching time is about 0.945 seconds (per image pair) under CPU hardware acceleration.
+##   Overview
+NerveStitcher 2.0 delivers a **one-click, two-stage** stitching workflow for **hundreds to thousands** of partially overlapping microscopy images (corneal nerves, OCT, industrial surfaces, …).  
+The pipeline
 
-NerveStitcher was developed by *Tianyu Li* of TGU-UOW Lab on the basis of [SuperGlue](https://github.com/magicleap/SuperGluePretrainedNetwork).
+1. **Segment stitching (`new_stitching.py`)** – iteratively stitches consecutive frames, auto-detects breakpoints, and exports several mid-sized mosaics.  
+2. **Global fusion (`bigmapstiching.py`)** – matches and merges the segment mosaics into one (or a few) ultra-large panoramas.
 
-For more information, please read：<br>
-NerveStitcher：
-``
-Li G, Li T, Li F, et al. NerveStitcher: Corneal confocal microscope images stitching with neural networks[J]. Computers in Biology and Medicine, 2022: 106303.
-https://doi.org/10.1016/j.compbiomed.2022.106303
-``<br><br>
-Vignetting correction：
-``
-LI Tianyu,LI Guangxu,ZHANG Chen,et al.Adaptive vignetting correction of corneal nerve microscopy images[J].Optics and Precision Engineering,2022,30(20):2479-2488. DOI： 10.37188/OPE.20223020.2479.
-``
+By leveraging SuperPoint + SuperGlue for deep feature matching, the method is far more robust than traditional SIFT/ORB approaches. The segment strategy keeps memory usage low and prevents local failures from ruining the whole set.
 
-Official Website: **[TGU-UOW 2022](https://www.tgu-uow.com)**
+---
 
-## Usage
-Before running, you need to download the model file and replace it in **models/weights**, here is the link to download the weights: https://drive.google.com/drive/folders/1SgHwGcFwKbV6Bv7OgV1PbqCWmSJgx3jZ?usp=sharing
+##   Key Features
+**Robust two-stage stitching** – breakpoint self-recovery.  
+**Deep feature matching** – SuperPoint/SuperGlue (`indoor` weights).  
+**Low memory footprint** – real-time disk flushing; 1000×384² images fit into 8 GB RAM.  
+**GPU / CPU auto-switch** – CUDA detected automatically; CPU enforced by `force_cpu`.  
+**Single-point configuration** – all paths & thresholds at the top of each script.
 
-Note before use that the default image size is 384×384, use English file names and sort well (e.g. zhOD0001.jpg zhOD0002.jpg ...). <br>
-NerveStitcher is compatible with **.jpg**  **.png** **.tiff** format images. <br>
-We provide files to modify the file name and format, please refer to **img_rename.py**
+---
 
-Make sure that only numbers are sorted when sorting. As in line 14 of **make\_img\_list.py**, the current sort is zhOD0001.jpg with the number 0001 (sorted from the fourth positive character to the middle of the fourth negative character), you can modify this sorting rule to match the name of your image. The same code also appears in **correction.py** line 191. <br>
-### vignetting correction
-Please refer to **correction.py** , and modify the **path** and **savepath** parameters before use.
+##   Requirements & Installation
+```bash
+# create lightweight environment
+conda create -n nervestitcher2 python=3.8
+conda activate nervestitcher2
+pip install -r requirements.txt        # incl. OpenCV-Python, torch, etc.
+# for GPU support, install the CUDA-enabled PyTorch that matches your system
+```
 
-There are two methods of vignetting correction: <br>
-1. Adaptive correction (**not recommended**)<br>
-This method will automatically calculate the vignetting parameters for each image, but it is slow and ineffective. If you want to use this method please uncomment line 163 and add comment line 164.<br>
-2. Automatic correction<br>
-This method uses fixed vignetting parameters, which have been verified by our tests to ensure the accuracy of the correction. First, refer to *data/reference.jpg* to specify the histogram of the original image, and then correct it according to the preset vignetting parameters (line 164).
-### image stitching
-Please refer to **stitching.py** , modify **input\_dir** (the address of the image data to be stitched), **input\_pairs\_path** (the address of the list of images to be stitched), **output\_viz\_dir** (the address where the final result is saved), **force\_cpu** (whether to force the CPU or GPU) before using.<br>
-The folder structure is based on the example file **data/test/stitch\_img OR stitch\_img2**, where the "match" folder holds the final stitching results and the "result" folder holds the results of each stitching.
+Download the pretrained weights and place them in `models/weights/`:
 
-## Contact Us
-NerveStitcher can also be used to stitch other microscopy images. Some of the images we have successfully tested are: fundus vascular and thickness OCT images, fundus vascular images.
+(Download link available in the project wiki / Google Drive.)
+https://drive.google.com/drive/folders/1SgHwGcFwKbV6Bv7OgV1PbqCWmSJgx3jZ?usp=sharing
+---
+
+##   Quick Start
+```bash
+# 1. Prepare your images + stitching_list.txt
+#    Example set shipped in test_data/test1/
+# 2. Launch the one-click pipeline
+python final_stitching.py
+# 3. Inspect results
+#    ├─ Segment mosaics : test_data/test1_result/
+#    └─ Final panorama  : test_data/test1/test1_fina_result/
+```
+
+To use your own dataset, only change **two or three path constants** at the top of `new_stitching.py` and `bigmapstiching.py`.
+
+---
+
+##   Parameters at a Glance
+
+| Script             | Parameter          | Default                              | Description                         |
+|--------------------|--------------------|--------------------------------------|-------------------------------------|
+| `new_stitching.py` | `MY_INPUT_DIR`     | `test_data/test1/`                   | Small-image input folder            |
+|                    | `MY_OUTPUT_DIR`    | `test_data/test1_result/`            | Segment mosaic output folder        |
+|                    | `match_threshold`  | `0.80`                               | SuperGlue confidence threshold      |
+| `bigmapstiching.py`| `folder`           | `test_data/test1/test1_result`       | Segment mosaics input               |
+|                    | `output_dir`       | `test_data/test1/test1_fina_result`  | Final panorama output               |
+|                    | `threshold`        | `20`                                 | Gray-value threshold for masks      |
+
+---
+
+##   FAQ
+1. **CUDA out of memory**  
+   • Reduce `max_keypoints` or force CPU mode (`force_cpu=True`).  
+2. **Too many breakpoints / segments**  
+   • Decrease `match_threshold` slightly or capture images with more overlap.  
+3. **Segment mosaics fail to merge**  
+   • Verify overlap exists; print match count in `bigmapstiching.py` for debugging.
+
+---
+##  Contact Us
+NerveStitcher2.0 can also be used to stitch other microscopy images. Some of the images we have successfully tested are: fundus vascular and thickness OCT images, fundus vascular images.
 
 For additional questions or discussions, Please contact email:
 
@@ -52,21 +89,24 @@ liguangxu@tiangong.edu.cn
 
 litianyu@tiangong.edu.cn
 
-## BibTeX Citation
-If you use any ideas from the paper or code from this repo, please consider citing:
+2431080994@tiangong.edu.cn
 
-```txt
+##   Citation
+If this project or its predecessors benefit your research, please cite:
+
+```bibtex
 @article{li2022nervestitcher,
-  title={NerveStitcher: Corneal confocal microscope images stitching with neural networks},
-  author={Li, Guangxu and Li, Tianyu and Li, Fangting and Zhang, Chen},
-  journal={Computers in Biology and Medicine},
-  pages={106303},
-  year={2022},
-  publisher={Elsevier}
+  title  = {NerveStitcher: Corneal confocal microscope images stitching with neural networks},
+  author = {Li, Guangxu and Li, Tianyu and Li, Fangting and Zhang, Chen},
+  journal= {Computers in Biology and Medicine},
+  year   = {2022},
+  pages  = {106303},
+  publisher = {Elsevier}
 }
 ```
 
+---
 
-## Copyright
-Do not use for commercial purposes without permission. <br>
-Copyright (c) 2022 TGU-UOW
+## 9  License
+Academic research use only – any commercial usage requires written permission.  
+© 2023-2024 TGU-UOW Lab – Hongyu Qian
