@@ -107,6 +107,6 @@ If this project or its predecessors benefit your research, please cite:
 
 ---
 
-## 9  License
+##   License
 Academic research use only – any commercial usage requires written permission.  
 © 2023-2024 TGU-UOW Lab – Hongyu Qian
